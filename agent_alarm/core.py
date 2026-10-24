@@ -1,9 +1,10 @@
 """Rule-based alarm system over an agent's action stream."""
+
 from __future__ import annotations
 
 import re
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
@@ -13,9 +14,21 @@ MODES = {
     "home": {"big_spend": 500, "daily_budget": 1000, "upload_mb": 50, "burst_per_min": 30, "quiet": (0, 6)},
     "away": {"big_spend": 50, "daily_budget": 200, "upload_mb": 5, "burst_per_min": 10, "quiet": (22, 8)},
 }
-DESTRUCTIVE_RE = re.compile(r"rm\s+-rf|drop\s+(table|database)|truncate\s+table|git\s+push\s+(-f|--force)|delete_all|bulk_delete|format\s+c:|mkfs", re.I)
-DESTRUCTIVE_ACTIONS = {"delete_file", "delete_email", "delete_repo", "bulk_archive", "cancel_subscription", "close_account"}
-SENSITIVE_RE = re.compile(r"(\.ssh|id_rsa|id_ed25519|\.aws/credentials|\.env\b|1password|keychain|bitwarden|/tax|/medical|passport)", re.I)
+DESTRUCTIVE_RE = re.compile(
+    r"rm\s+-rf|drop\s+(table|database)|truncate\s+table|git\s+push\s+(-f|--force)|delete_all|bulk_delete|format\s+c:|mkfs",
+    re.I,
+)
+DESTRUCTIVE_ACTIONS = {
+    "delete_file",
+    "delete_email",
+    "delete_repo",
+    "bulk_archive",
+    "cancel_subscription",
+    "close_account",
+}
+SENSITIVE_RE = re.compile(
+    r"(\.ssh|id_rsa|id_ed25519|\.aws/credentials|\.env\b|1password|keychain|bitwarden|/tax|/medical|passport)", re.I
+)
 SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
 
@@ -67,15 +80,16 @@ class Alarm:
             day = (agent, ts.date())
             self.daily[day] += amt
             if amt >= self.cfg["big_spend"]:
-                alert("big_spend", "critical" if amt >= 2 * self.cfg["big_spend"] else "high", f"${amt:,.2f} to {target}")
+                alert(
+                    "big_spend", "critical" if amt >= 2 * self.cfg["big_spend"] else "high", f"${amt:,.2f} to {target}"
+                )
             elif self.mode == "away":
                 alert("payment_while_away", "medium", f"${amt:,.2f} to {target}")
             if self.daily[day] > self.cfg["daily_budget"]:
                 alert("spend_velocity", "high", f"${self.daily[day]:,.2f} today exceeds ${self.cfg['daily_budget']:,}")
-        if action in {"send_email", "send_message", "share"}:
-            if target.lower() not in self.known:
-                alert("new_recipient", "high" if self.mode == "away" else "medium", f"first contact with {target}")
-                self.known.add(target.lower())
+        if action in {"send_email", "send_message", "share"} and target.lower() not in self.known:
+            alert("new_recipient", "high" if self.mode == "away" else "medium", f"first contact with {target}")
+            self.known.add(target.lower())
         if action in DESTRUCTIVE_ACTIONS or DESTRUCTIVE_RE.search(target):
             alert("destructive", "critical", f"{action}: {target}")
         if action in {"upload", "http_post", "share_file"}:

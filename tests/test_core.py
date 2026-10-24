@@ -4,7 +4,10 @@ import unittest
 
 from agent_alarm import Alarm
 
-EVENTS = [json.loads(l) for l in (pathlib.Path(__file__).resolve().parent.parent / "examples" / "events.jsonl").read_text().splitlines()]
+EVENTS = [
+    json.loads(l)
+    for l in (pathlib.Path(__file__).resolve().parent.parent / "examples" / "events.jsonl").read_text().splitlines()
+]
 
 
 def ev(action, target, ts="2026-10-24T12:00:00", **kw):
@@ -17,7 +20,9 @@ class Tests(unittest.TestCase):
         for e in EVENTS:
             alarm.evaluate(e)
         sensors = {a.sensor for a in alarm.alerts}
-        self.assertTrue({"big_spend", "new_recipient", "destructive", "exfiltration", "sensitive_access", "off_hours"} <= sensors)
+        self.assertTrue(
+            {"big_spend", "new_recipient", "destructive", "exfiltration", "sensitive_access", "off_hours"} <= sensors
+        )
         self.assertNotIn("payment_while_away", sensors)
 
     def test_away_mode_is_stricter(self):

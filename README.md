@@ -1,5 +1,7 @@
 # agent-alarm
 
+[![CI](https://github.com/eliem08/agent-alarm/actions/workflows/ci.yml/badge.svg)](https://github.com/eliem08/agent-alarm/actions/workflows/ci.yml)
+
 > **ADT for your personal agent** — alerts when your agent does something it shouldn't.
 
 Your agent has your inbox, your card and your files. Most of the time it's
@@ -43,3 +45,26 @@ if decision["block"]: ...
 - Push / SMS alerts with one-tap "pause agent" (pairs with agent-okta revoke)
 - Learned per-agent baselines instead of static thresholds
 - Monitoring centre: human reviewers for high-severity alerts (subscription)
+
+## Development
+
+Zero runtime dependencies; Python 3.10+.
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+python -m unittest discover -s tests -t .           # unit + CLI smoke tests
+ruff check . && ruff format --check .               # lint + format
+```
+
+```
+agent_alarm/core.py       domain logic (pure, importable, fully tested)
+agent_alarm/__main__.py   CLI (`agent-alarm ...` / `python -m agent_alarm ...`)
+tests/                unit tests + generated CLI smoke tests
+examples/             sample inputs used by the docs and smoke tests
+```
+
+CI runs lint and tests on Ubuntu and Windows across Python 3.10, 3.12 and 3.13.
+Design, data model, trade-offs and production path: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
+Part of the [agent-economy](https://github.com/eliem08/agent-economy) portfolio (idea #24).

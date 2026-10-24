@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import json
 import sys
 
@@ -17,15 +18,17 @@ def main(argv=None):
     w.add_argument("--allow-domain", nargs="*", default=[])
     a = ap.parse_args(argv)
     alarm = Alarm(a.mode, a.known, a.allow_domain)
-    fh = sys.stdin if a.events == "-" else open(a.events, encoding="utf-8")
-    with fh:
+    with contextlib.ExitStack() as stack:
+        fh = sys.stdin if a.events == "-" else stack.enter_context(open(a.events, encoding="utf-8"))
         for line in fh:
             if not line.strip():
                 continue
             decision = alarm.check(json.loads(line))
             for al in decision["alerts"]:
-                print(f"{COLORS[al.severity]:>3} [{al.severity.upper():<8}] {al.ts} {al.agent:<10} {al.sensor:<18} {al.detail}"
-                      + ("  -> BLOCKED" if decision["block"] else ""))
+                print(
+                    f"{COLORS[al.severity]:>3} [{al.severity.upper():<8}] {al.ts} {al.agent:<10} {al.sensor:<18} {al.detail}"
+                    + ("  -> BLOCKED" if decision["block"] else "")
+                )
     counts = {}
     for al in alarm.alerts:
         counts[al.severity] = counts.get(al.severity, 0) + 1
