@@ -1,0 +1,7 @@
+{"ts": "2026-10-24T10:00:00", "agent": "inbox-bot", "action": "send_email", "target": "boss@acme.com"}
+{"ts": "2026-10-24T10:05:00", "agent": "shopper", "action": "payment", "target": "amazon.com", "amount": 42.0}
+{"ts": "2026-10-24T11:00:00", "agent": "shopper", "action": "payment", "target": "giftcards-now.biz", "amount": 650.0}
+{"ts": "2026-10-24T11:30:00", "agent": "inbox-bot", "action": "send_email", "target": "invoices@new-vendor.io"}
+{"ts": "2026-10-24T12:00:00", "agent": "coder", "action": "shell", "target": "rm -rf ./data"}
+{"ts": "2026-10-24T12:10:00", "agent": "coder", "action": "upload", "target": "https://paste.example/upload", "bytes": 52000000}
+{"ts": "2026-10-24T03:12:00", "agent": "files", "action": "read_file", "target": "/home/me/.ssh/id_ed25519"}
