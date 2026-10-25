@@ -15,7 +15,7 @@ flowchart LR
   Check -->|block| Agent
   Check -->|alerts| Notify[Push / SMS]
   Notify --> Owner
-  Owner -->|pause agent| Okta[agent-okta revoke]
+  Owner -->|pause agent| Okta[agentwarden revoke]
   Tracer[agent-tracer events] --> Eval[Async evaluator]
   Eval --> Notify
 ```
@@ -51,4 +51,4 @@ process for under 1 ms checks. Events go to a stream, the async evaluator, alert
 ## 6. Risks
 Alert fatigue, so severity tuning, digests for low severity and learned baselines are needed.
 Agents bypassing the SDK means enforcement also has to happen at the credential layer
-(agent-okta, agent-plaid).
+(agentwarden, grantgate).

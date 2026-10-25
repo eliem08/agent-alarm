@@ -1,4 +1,4 @@
-"""ADT for your personal agent: alerts when your agent does something it should not."""
+"""Agent Alarm: Alerts when your AI agent does something it should not."""
 
 from .core import *
 
