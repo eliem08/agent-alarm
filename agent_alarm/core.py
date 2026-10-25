@@ -68,6 +68,8 @@ class Alarm:
         return (a <= ts.hour < b) if a < b else (ts.hour >= a or ts.hour < b)
 
     def evaluate(self, ev: dict) -> list[Alert]:
+        if not isinstance(ev, dict):
+            raise ValueError(f"each event must be a JSON object, got {ev!r:.60}")
         ts = datetime.fromisoformat(ev["ts"])
         agent, action, target = ev.get("agent", "?"), ev.get("action", ""), str(ev.get("target", ""))
         out = []
