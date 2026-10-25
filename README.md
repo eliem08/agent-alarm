@@ -45,7 +45,7 @@ Every plan starts with a 14-day free trial. Prices in USD, billed monthly unless
 | **Pro** | $29 per month | 10 agents; Custom thresholds; Alert history |
 | **Team** | $149 per month | Unlimited agents; Shared policies; Priority support |
 
-To start a trial or buy a plan, email **sales@YOUR-DOMAIN.com**.
+To start a trial or buy a plan, [request access](https://github.com/eliem08/agent-alarm/issues/new?title=Agent%20Alarm%20trial&labels=sales).
 
 ## Licence
 
