@@ -50,6 +50,35 @@ class Tests(unittest.TestCase):
             out = alarm.evaluate(ev("read_file", "f", ts=f"2026-10-24T12:00:{i:02d}"))
         self.assertIn("burst", {a.sensor for a in out})
 
+    def test_nan_or_negative_amounts_cannot_blind_the_spend_sensors(self):
+        alarm = Alarm("home")
+        for amount in ("nan", -5000, "lots"):
+            with self.subTest(amount=amount):
+                sensors = {a.sensor for a in alarm.evaluate(ev("payment", "shop", amount=amount))}
+                self.assertIn("invalid_amount", sensors)
+        alarm.evaluate(ev("payment", "shop", amount=600))
+        out = alarm.evaluate(ev("payment", "shop", amount=450))  # 1050 > 1000 daily budget, not reset by -5000
+        self.assertIn("spend_velocity", {a.sensor for a in out})
+
+    def test_action_case_cannot_dodge_a_sensor(self):
+        alarm = Alarm("home", block_at="critical")
+        self.assertTrue(alarm.check(ev("DELETE_FILE", "/home/me/thesis.docx"))["block"])
+        self.assertIn("big_spend", {a.sensor for a in alarm.evaluate(ev("Payment", "shop", amount=900))})
+
+    def test_many_small_uploads_still_count_as_exfiltration(self):
+        alarm = Alarm("away")
+        sensors = set()
+        for _ in range(3):
+            sensors |= {a.sensor for a in alarm.evaluate(ev("upload", "https://evil.example/drop", bytes=2_000_000))}
+        self.assertIn("exfiltration", sensors)
+
+    def test_destructive_command_variants(self):
+        alarm = Alarm("home")
+        for cmd in ("rm -fr /srv", "rm -r -f build", "git push origin main --force"):
+            with self.subTest(cmd=cmd):
+                self.assertIn("destructive", {a.sensor for a in alarm.evaluate(ev("run_shell", cmd))})
+        self.assertNotIn("destructive", {a.sensor for a in alarm.evaluate(ev("run_shell", "git push origin main"))})
+
 
 if __name__ == "__main__":
     unittest.main()

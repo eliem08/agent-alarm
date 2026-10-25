@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections import defaultdict, deque
 from dataclasses import dataclass
@@ -15,7 +16,8 @@ MODES = {
     "away": {"big_spend": 50, "daily_budget": 200, "upload_mb": 5, "burst_per_min": 10, "quiet": (22, 8)},
 }
 DESTRUCTIVE_RE = re.compile(
-    r"rm\s+-rf|drop\s+(table|database)|truncate\s+table|git\s+push\s+(-f|--force)|delete_all|bulk_delete|format\s+c:|mkfs",
+    r"rm\s+(-\w*r\w*f|-\w*f\w*r|-r\s+-f|-f\s+-r|--recursive)|drop\s+(table|database)|truncate\s+table"
+    r"|git\s+push\b[^\n]*(\s-f\b|--force)|delete_all|bulk_delete|format\s+c:|mkfs",
     re.I,
 )
 DESTRUCTIVE_ACTIONS = {
@@ -56,6 +58,7 @@ class Alarm:
         self.allowed = {d.lower() for d in allowed_domains}
         self.block_at = block_at
         self.daily = defaultdict(float)
+        self.uploaded = defaultdict(float)  # (agent, host, day) -> MB, so many small uploads still add up
         self.recent = defaultdict(deque)
         self.alerts: list[Alert] = []
 
@@ -71,15 +74,23 @@ class Alarm:
         if not isinstance(ev, dict):
             raise ValueError(f"each event must be a JSON object, got {ev!r:.60}")
         ts = datetime.fromisoformat(ev["ts"])
-        agent, action, target = ev.get("agent", "?"), ev.get("action", ""), str(ev.get("target", ""))
+        agent, target = ev.get("agent", "?"), str(ev.get("target", ""))
+        action = str(ev.get("action", "")).strip().lower()  # "Payment" / "DELETE_FILE" must not dodge a sensor
         out = []
 
         def alert(sensor, sev, detail):
             out.append(Alert(sensor, sev, agent, detail, ev["ts"]))
 
         if action in {"payment", "purchase", "transfer"}:
-            amt = float(ev.get("amount", 0))
+            try:
+                amt = float(ev.get("amount", 0))
+            except (TypeError, ValueError):
+                amt = math.nan
             day = (agent, ts.date())
+            if not (math.isfinite(amt) and amt >= 0):
+                # nan would slip under every threshold and poison the daily total; negatives would reset it
+                alert("invalid_amount", "critical", f"amount {ev.get('amount')!r} to {target}")
+                amt = 0.0
             self.daily[day] += amt
             if amt >= self.cfg["big_spend"]:
                 alert(
@@ -95,10 +106,19 @@ class Alarm:
         if action in DESTRUCTIVE_ACTIONS or DESTRUCTIVE_RE.search(target):
             alert("destructive", "critical", f"{action}: {target}")
         if action in {"upload", "http_post", "share_file"}:
-            mb = ev.get("bytes", 0) / 1e6
+            try:
+                mb = float(ev.get("bytes", 0)) / 1e6
+            except (TypeError, ValueError):
+                mb = math.inf
+            mb = mb if math.isfinite(mb) and mb >= 0 else math.inf  # unparseable size: assume the worst
             host = _host(target)
-            if host not in self.allowed and mb >= self.cfg["upload_mb"]:
-                alert("exfiltration", "critical", f"{mb:.1f} MB to {host}")
+            if host not in self.allowed:
+                key = (agent, host, ts.date())
+                self.uploaded[key] += mb
+                if mb >= self.cfg["upload_mb"]:
+                    alert("exfiltration", "critical", f"{mb:.1f} MB to {host}")
+                elif self.uploaded[key] >= self.cfg["upload_mb"]:
+                    alert("exfiltration", "critical", f"{self.uploaded[key]:.1f} MB to {host} today in small uploads")
         if SENSITIVE_RE.search(target):
             alert("sensitive_access", "high", f"{action} {target}")
         if self._quiet(ts):
