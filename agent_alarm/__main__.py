@@ -10,7 +10,7 @@ from .core import MODES, Alarm
 COLORS = {"low": "", "medium": "", "high": "!", "critical": "!!!"}
 
 
-def _run(argv=None):
+def build_parser():
     ap = argparse.ArgumentParser(prog="agent-alarm")
     sub = ap.add_subparsers(dest="cmd", required=True)
     w = sub.add_parser("watch")
@@ -18,6 +18,11 @@ def _run(argv=None):
     w.add_argument("--mode", choices=sorted(MODES), default="home")
     w.add_argument("--known", nargs="*", default=["boss@acme.com"])
     w.add_argument("--allow-domain", nargs="*", default=[])
+    return ap
+
+
+def _run(argv=None):
+    ap = build_parser()
     a = ap.parse_args(argv)
     alarm = Alarm(a.mode, a.known, a.allow_domain)
     with contextlib.ExitStack() as stack:

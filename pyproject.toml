@@ -23,6 +23,7 @@ dev = ["ruff>=0.6"]
 
 [project.scripts]
 agent-alarm = "agent_alarm.__main__:main"
+agent-alarm-web = "agent_alarm.web:main"
 
 [project.urls]
 Repository = "https://github.com/eliem08/agent-alarm"
