@@ -5,7 +5,8 @@ import json
 import os
 import sys
 
-from .core import MODES, Alarm
+from .core import MODES, SEVERITY_RANK, Alarm
+from .notify import Notifier
 
 COLORS = {"low": "", "medium": "", "high": "!", "critical": "!!!"}
 
@@ -18,12 +19,19 @@ def build_parser():
     w.add_argument("--mode", choices=sorted(MODES), default="home")
     w.add_argument("--known", nargs="*", default=["boss@acme.com"])
     w.add_argument("--allow-domain", nargs="*", default=[])
+    w.add_argument(
+        "--webhook",
+        default=os.environ.get("AGENT_ALARM_WEBHOOK", ""),
+        help="https Slack/Discord/any webhook to push alerts to (or set AGENT_ALARM_WEBHOOK)",
+    )
+    w.add_argument("--notify-min", choices=sorted(SEVERITY_RANK, key=SEVERITY_RANK.get), default="high")
     return ap
 
 
 def _run(argv=None):
     ap = build_parser()
     a = ap.parse_args(argv)
+    notify = Notifier(a.webhook, a.notify_min) if a.webhook else None
     alarm = Alarm(a.mode, a.known, a.allow_domain)
     with contextlib.ExitStack() as stack:
         fh = sys.stdin if a.events == "-" else stack.enter_context(open(a.events, encoding="utf-8-sig"))
@@ -36,10 +44,14 @@ def _run(argv=None):
                     f"{COLORS[al.severity]:>3} [{al.severity.upper():<8}] {al.ts} {al.agent:<10} {al.sensor:<18} {al.detail}"
                     + ("  -> BLOCKED" if decision["block"] else "")
                 )
+                if notify:
+                    notify(al, decision["block"])
     counts = {}
     for al in alarm.alerts:
         counts[al.severity] = counts.get(al.severity, 0) + 1
     print(f"\n{len(alarm.alerts)} alerts in {a.mode} mode: {counts}")
+    if notify:
+        print(f"webhook: {notify.sent} delivered, {notify.failed} failed")
     return 0
 
 

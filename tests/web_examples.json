@@ -9,7 +9,9 @@
    "mode": "away",
    "known": [
     "boss@acme.com"
-   ]
+   ],
+   "webhook": "",
+   "notify_min": "high"
   }
  }
 ]
