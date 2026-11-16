@@ -53,15 +53,18 @@ Buyers pick a plan on `/pricing`, pay on Stripe Checkout and see their API key o
 
 ## Pricing
 
-Every plan starts with a 14-day free trial. Prices in USD, billed monthly unless noted.
+Monthly plans start with a 14-day free trial. Prices in USD, billed monthly unless noted.
 
 | Plan | Price | Includes |
 |---|---|---|
 | **Personal** | $7 per month | 1 agent; Home and away modes; Inline blocking |
-| **Pro** | $29 per month | 10 agents; Custom thresholds; Alert history |
-| **Team** | $149 per month | Unlimited agents; Shared policies; Priority support |
+| **Pro** | $29 per month | 10 agents; Slack, Discord and webhook alerts; Alert threshold |
+| **Team** | $149 per month | Unlimited agents; Priority support |
 
 To start a trial or buy a plan, [request access](https://github.com/eliem08/agent-alarm/issues/new?title=Agent%20Alarm%20trial&labels=sales).
+
+Plan note: every plan runs the same software, and every API key unlocks all of it. Seat, agent and volume
+limits are licence terms; the code does not enforce them. Support, SLA and done-for-you items are services.
 
 ## Licence
 
