@@ -80,4 +80,24 @@ SPEC = {
             "id": "watch",
         }
     ],
+    "plans": [
+        {
+            "key": "personal",
+            "name": "Personal",
+            "price": "$7 per month",
+            "features": ["1 agent", "Home and away modes", "Inline blocking"],
+        },
+        {
+            "key": "pro",
+            "name": "Pro",
+            "price": "$29 per month",
+            "features": ["10 agents", "Slack, Discord and webhook alerts", "Alert threshold"],
+        },
+        {
+            "key": "team",
+            "name": "Team",
+            "price": "$149 per month",
+            "features": ["Unlimited agents", "Priority support"],
+        },
+    ],
 }
