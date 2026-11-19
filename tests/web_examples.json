@@ -13,5 +13,12 @@
    "webhook": "",
    "notify_min": "high"
   }
+ },
+ {
+  "op": "alerts",
+  "payload": {
+   "hours": 24.0,
+   "min": "medium"
+  }
  }
 ]

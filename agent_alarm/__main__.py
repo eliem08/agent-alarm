@@ -25,12 +25,19 @@ def build_parser():
         help="https Slack/Discord/any webhook to push alerts to (or set AGENT_ALARM_WEBHOOK)",
     )
     w.add_argument("--notify-min", choices=sorted(SEVERITY_RANK, key=SEVERITY_RANK.get), default="high")
+    al = sub.add_parser("alerts", help="alerts the hosted /events endpoint has raised")
+    al.add_argument("--hours", type=float, default=24, help="how far back to look")
+    al.add_argument("--min", choices=sorted(SEVERITY_RANK, key=SEVERITY_RANK.get), default="medium")
+    al.add_argument("--store", default="alerts.jsonl", help="the event log (the hosted server pins its own)")
+    al.add_argument("--json", action="store_true")
     return ap
 
 
 def _run(argv=None):
     ap = build_parser()
     a = ap.parse_args(argv)
+    if a.cmd == "alerts":
+        return _alerts(a)
     notify = Notifier(a.webhook, a.notify_min) if a.webhook else None
     alarm = Alarm(a.mode, a.known, a.allow_domain)
     with contextlib.ExitStack() as stack:
@@ -52,6 +59,39 @@ def _run(argv=None):
     print(f"\n{len(alarm.alerts)} alerts in {a.mode} mode: {counts}")
     if notify:
         print(f"webhook: {notify.sent} delivered, {notify.failed} failed")
+    return 0
+
+
+def _alerts(a) -> int:
+    from datetime import datetime, timedelta, timezone
+
+    if not 0 < a.hours <= 24 * 366:
+        raise ValueError("--hours must be between 0 and 8784")
+    since = datetime.now(timezone.utc) - timedelta(hours=a.hours)
+    floor = SEVERITY_RANK[a.min]
+    rows = []
+    try:
+        with open(a.store, encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                if datetime.fromisoformat(rec["received"]) < since:
+                    continue
+                for al in rec["alerts"]:
+                    if SEVERITY_RANK[al["severity"]] >= floor:
+                        rows.append({**al, "blocked": rec["block"], "received": rec["received"]})
+    except FileNotFoundError:
+        pass
+    if a.json:
+        print(json.dumps(rows, indent=2))
+        return 0
+    for r in rows:
+        print(
+            f"{COLORS[r['severity']]:>3} [{r['severity'].upper():<8}] {r['received']} {r['agent']:<10} "
+            f"{r['sensor']:<18} {r['detail']}" + ("  -> BLOCKED" if r["blocked"] else "")
+        )
+    print(f"{len(rows)} alert(s) at {a.min} or above in the last {a.hours:g} h")
     return 0
 
 

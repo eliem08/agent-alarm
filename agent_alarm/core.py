@@ -133,6 +133,37 @@ class Alarm:
         self.alerts.extend(out)
         return out
 
+    def to_dict(self, keep_days: int = 2) -> dict:
+        """The running totals a hosted alarm must keep between calls (spend today, uploads, bursts, contacts)."""
+        newest = max([d for _, d in self.daily] + [k[2] for k in self.uploaded], default=None)
+        floor = newest - timedelta(days=keep_days) if newest else None
+
+        def fresh(day):
+            return floor is None or day >= floor
+
+        return {
+            "mode": self.mode,
+            "known": sorted(self.known),
+            "allowed": sorted(self.allowed),
+            "daily": [[a, d.isoformat(), v] for (a, d), v in self.daily.items() if fresh(d)],
+            "uploaded": [[a, h, d.isoformat(), v] for (a, h, d), v in self.uploaded.items() if fresh(d)],
+            "recent": {a: [t.isoformat() for t in q] for a, q in self.recent.items() if q},
+        }
+
+    @classmethod
+    def from_dict(cls, doc: dict, mode: str | None = None, known=(), allowed=()) -> Alarm:
+        """Restore totals; mode, known recipients and allowed domains from configuration win over stored ones."""
+        from datetime import date
+
+        alarm = cls(mode or doc.get("mode", "home"), [*doc.get("known", []), *known], [*allowed])
+        for a, d, v in doc.get("daily", []):
+            alarm.daily[(a, date.fromisoformat(d))] = float(v)
+        for a, h, d, v in doc.get("uploaded", []):
+            alarm.uploaded[(a, h, date.fromisoformat(d))] = float(v)
+        for a, ts in doc.get("recent", {}).items():
+            alarm.recent[a] = deque(datetime.fromisoformat(t) for t in ts)
+        return alarm
+
     def check(self, ev: dict) -> dict:
         alerts = self.evaluate(ev)
         worst = max((SEVERITY_RANK[a.severity] for a in alerts), default=0)
